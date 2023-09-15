@@ -123,7 +123,9 @@ d = 244.244  # mm
 # test_result = np.array([50.32612371 ,101.16358628 , 52.01101179, 101.83780644])
 # test_result = np.array([54.93845191 ,86.08845309 ,64.96986728 ,89.59000895])
 # test_result = np.array([50.00183095,  72.20425701, 222.08995491, 199.88918179])
-# a,b,c,d = test_result
+test_result = np.array([100, 200 ,200, 200])
+
+a,b,c,d = test_result
 
 # Input angular velocity
 f = 16.7/60
@@ -252,13 +254,31 @@ from pymoo.optimize import minimize
 from pymoo.core.problem import ElementwiseProblem
 from pymoo.core.problem import Problem
 
+#### IDEA - FIT THE CURVE GIVEN TO A POLYNOMIAL REP THE output CURVE,
+ ### WHICH WILL HAVE EVENLY DIST POINTS. bec u define the x range. TRY THIS NEXT TIME
+
+plt.clf()
+
 testarr = [100, 250, 110, 244.244]
 
 # Define the target curve (replace with your own data)
 
-x111 = np.linspace(100,300, 100)
+x111 = np.linspace(-40, -20, 100)
 
-y111 = -np.sqrt((100**2 - (x111 - 200)**2))
+y111 = -np.sqrt((25**2 - (x111 - 100)**2))
+
+y111 = (1/2*x111+10)**2 - 100
+
+plt.figure(figsize=(8, 4))  # Set the figure size
+plt.plot(x111, y111, label='output curve to match', color='blue')  # Plot the data
+plt.xlabel('x')  # Label for the x-axis
+plt.ylabel('y')  # Label for the y-axis
+plt.title('Semicircle Plot')  # Title of the plot
+plt.grid(True)  # Display grid lines
+plt.legend()  # Display legend
+plt.axhline(0, color='black',linewidth=0.5)  # Add a horizontal line at y=0
+plt.axvline(125, color='black',linewidth=0.5)  # Add a vertical line at x=200
+plt.show()  # Show the plot
 
 
 target_curve_ax_x = X_ax_fit
@@ -283,7 +303,7 @@ def objective_function(X1):
     # Input angular velocity
     f = 16.7/60
     omega = 2 * np.pi * f
-    t = np.linspace(0, 5, 100)
+    t = np.linspace(0, np.pi, 100)
     y = a * np.sin(omega * t)
     x = a * np.cos(omega * t)
     theta2 = np.arctan2(y, x)
@@ -305,7 +325,7 @@ def objective_function(X1):
     
     # Calculate the x and y coordinates of the path points
     linkage_path_x = d + c * np.cos(fi4_1)
-    linkage_path_y = 0 + c * np.sin(fi4_1)
+    linkage_path_y = c * np.sin(fi4_1)
     
     
     # Calculate the MSE between the linkage path and target curve
@@ -315,11 +335,6 @@ def objective_function(X1):
     
     return mse
 
-# Define the optimization problem (modify as needed)
-minconstarray = np.array([-200,-200,-200,-200])
-
-#array of max vals [a,b,c,d] = 
-maxconstarray = np.array([1000,1000,1000,1000])
 
 import numpy as np
 from pymoo.optimize import minimize
@@ -327,8 +342,8 @@ from pymoo.optimize import minimize
 class LinkageOptimizationProblem(ElementwiseProblem):
     def __init__(self):
         # Define the bounds for your design variables (a, b, c, d)
-        xl = np.array([50, 50, 50, 50])
-        xu = np.array([200, 1000, 1000, 200])
+        xl = np.array([20, 20, 20, 20])
+        xu = np.array([500, 500, 500, 500])
         super().__init__(n_var=4, n_obj=1, n_ieq_constr=0, xl=xl, xu=xu)
 
     def _evaluate(self, X1, out, *args, **kwargs):
@@ -355,23 +370,135 @@ from pymoo.algorithms.soo.nonconvex.pso import PSO
 from pymoo.termination.default import DefaultSingleObjectiveTermination
 from pymoo.termination import get_termination
 
-termination = get_termination("n_gen", 50)
+#termination = get_termination("n_gen", 500)
 
 # Create a GA algorithm instance
 algorithm = GA(
     pop_size=5000,
     eliminate_duplicates=True,
-    n_gen=1000,
-    
 )
 
 
+initial_guess = np.array([100, 250, 110, 244.244])
 # Perform optimization
-res = minimize(problem, algorithm, seed=1, termination =termination, verbose = True)
+res = minimize(problem, algorithm, seed=1, verbose = True, x0=initial_guess) 
+#add termination to customize the termination = termination gen amnt
+
 
 # Print the best solution found
 print("Best solution found:\nX = %s\nF = %s" % (res.X, res.F))
 
+
+test_result = res.X
+
+a,b,c,d = test_result
+
+# Input angular velocity
+f = 16.7/60
+omega = 2 * np.pi * f
+t = np.linspace(0, np.pi, 50)
+y = a * np.sin(omega * t)
+x = a * np.cos(omega * t)
+theta2 = np.arctan2(y, x)
+
+fi2 = np.arctan2(y, x)
+
+# Solution of the vector loop equation
+K1 = d/a
+K2 = d/c
+K3 = (a**2 - b**2 + c**2 + d**2)/(2*a*c)
+A = np.cos(fi2) - K1 - K2*np.cos(fi2) + K3
+B = -2*np.sin(fi2)
+C = K1 - (K2+1)*np.cos(fi2) + K3
+fi4_1 = 2 * np.arctan2(-B + np.sqrt(B**2 - 4*A*C), 2*A)
+fi4_2 = 2 * np.arctan2(-B - np.sqrt(B**2 - 4*A*C), 2*A)
+
+# Create a figure with subplots for old and new graphs
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+fig.subplots_adjust(left=0.1, right=0.9)
+
+# Initialize the old graph
+theta4_1 = np.arccos((a**2 + b**2 - c**2 - d**2) / (2 * a * b))
+theta4_2 = -theta4_1
+
+line_theta2, = ax1.plot(t, np.degrees(fi2) % 360, color='k', label=r'$θ_2$')
+line_theta4_1, = ax1.plot(t, np.degrees(fi4_1) % 360, color='b', label=r'$θ_{4_1}$')
+line_theta4_2, = ax1.plot(t, np.degrees(fi4_2) % 360, color='r', label=r'$θ_{4_2}$')
+ax1.set_xlabel('t [s]')
+ax1.set_ylabel('degrees')
+ax1.legend()
+
+# Initialize the new animated graph
+link2, = ax2.plot([], [], 'k-', linewidth=2, label='Link 2')
+link3, = ax2.plot([], [], 'b-', linewidth=2, label='Link 3')
+link4, = ax2.plot([], [], 'r-', linewidth=2, label='Link 4')
+
+ax2.set_xlim(-400, 400)
+ax2.set_ylim(-400, 400)
+ax2.set_xlabel('X')
+ax2.set_ylabel('Y')
+ax2.set_title('New Animated Graph')
+ax2.legend()
+
+# Initialize empty arrays for position history
+x2_history = []
+y2_history = []
+x3_history = []
+y3_history = []
+
+# Animation function
+def animate(i):
+    theta2_i = theta2[i]
+    fi4_i = fi4_1[i]
+
+    x2 = a * np.cos(theta2_i)
+    y2 = a * np.sin(theta2_i)
+
+    # Calculate the positions of P3 based on theta2_i
+    x3 = d + c * np.cos(fi4_i)
+    y3 = 0 + c * np.sin(fi4_i)
+
+    # Append current positions to history
+    x2_history.append(x2)
+    y2_history.append(y2)
+    x3_history.append(x3)
+    y3_history.append(y3)
+
+    # Stationary position of the end of pivot 4
+    x4_stationary = d
+    y4_stationary = 0
+
+    # Plot the history along with current positions
+    link2.set_data([0, x2], [0, y2])
+    link3.set_data([x2, x3], [y2, y3])
+    link4.set_data([x3, x4_stationary], [y3, y4_stationary])
+
+    # Plot the path history
+    ax2.plot(x2_history, y2_history, 'k:', linewidth=0.5, alpha=0.5)
+    ax2.plot(x3_history, y3_history, 'b:', linewidth=0.5, alpha=0.5)
+
+# Create an animation
+ani = FuncAnimation(fig, animate, frames=len(t), repeat=True, blit=False)
+
+# Create a pause/play button
+ax_pause_play = plt.axes([0.8, 0.01, 0.1, 0.05])
+btn_pause_play = Button(ax_pause_play, 'Pause')
+
+paused = False
+
+def pause_play(event):
+    global paused
+    if paused:
+        ani.event_source.start()
+        btn_pause_play.label.set_text('Pause')
+    else:
+        ani.event_source.stop()
+        btn_pause_play.label.set_text('Play')
+    paused = not paused
+
+btn_pause_play.on_clicked(pause_play)
+
+plt.show()
 #need to add something that makes sure the sol is possilbe 
 #grashof cond?
 
