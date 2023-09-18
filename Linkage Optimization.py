@@ -309,6 +309,42 @@ data = np.array([[1, 2],
 
 cleaned_data = remove_nan_inf_rows(data)
 print(cleaned_data)
+#%%
+
+a = 100   # mm
+b = 250   # mm
+c = 110   # mm
+d = 244.244 
+
+X1 = np.array([100, 250, 110, 244.244])
+
+def grashof(X1):
+    # Create a list of tuples where each tuple contains the original value and its index
+    indexed_values = list(enumerate(X1))
+    print(indexed_values)
+    
+    # Sort the list of tuples based on the values (second element of each tuple)
+    sorted_values = sorted(indexed_values, key=lambda x: x[1])
+    
+    print("sorted_values:", sorted_values)
+    
+    # L = sorted_values[0][1]
+    # S = sorted_values[-1][1]
+    # P = sorted_values[2][1]
+    # Q = sorted_values[1][1]
+    
+    # print("L, shortest:", L)
+    # print("S, longest:", S)
+    # print("P, other:", P)
+    # print("Q, one more:", Q)
+    
+    # Extract the indexes from the sorted list
+    indexes = [x[0] for x in sorted_values]
+    
+    print(indexes)
+    return indexes, sorted_values, 
+
+indexes, sorted_values = grashof(X1)
 
 
 #%%
@@ -335,7 +371,31 @@ theta4_1, theta4_2 = freudenstein(inputangletheta2, a, b, c, d)[:2]
 output_path_xB = d + c * np.cos(theta4_1)
 output_path_xB = output_path_xB.flatten()
 
+def grashof(X1):
+    # Create a list of tuples where each tuple contains the original value and its index
+    indexed_values = list(enumerate(X1))
+    #print(indexed_values)
+    
+    # Sort the list of tuples based on the values (second element of each tuple)
+    sorted_values = sorted(indexed_values, key=lambda x: x[1])
+    
+    #print("sorted_values:", sorted_values)
+    
+    # L = sorted_values[0][1] also X1[index[0]]
+    # S = sorted_values[-1][1] also X1[index[1]]
+    # P = sorted_values[2][1]  also X1[index[2]]
+    # Q = sorted_values[1][1]  also X1[index[3]]
+    
+    # print("L, shortest:", L)
+    # print("S, longest:", S)
+    # print("P, other:", P)
+    # print("Q, one more:", Q)
+    
+    # Extract the indexes from the sorted list
+    indexes = [x[0] for x in sorted_values]
 
+    #print(indexes)
+    return indexes, sorted_values 
 
 def objective_function(X1): 
     # Extract design variables (e.g., link lengths)
@@ -360,7 +420,7 @@ def objective_function(X1):
     
     except:
         # Handle the exception (e.g., a big error) by setting DTW to a large value
-        dtw = 100000
+        dtw = 10000000
     
     #distance = dtw_x + dtw_y
     return dtw
@@ -374,7 +434,7 @@ class LinkageOptimizationProblem(ElementwiseProblem):
         # Define the bounds for your design variables (a, b, c, d)
         xl = np.array([20, 20, 20, 20])
         xu = np.array([500, 500, 500, 500])
-        super().__init__(n_var=4, n_obj=1, n_ieq_constr=0, xl=xl, xu=xu)
+        super().__init__(n_var=4, n_obj=1, n_ieq_constr=1, xl=xl, xu=xu)
 
     def _evaluate(self, X1, out, *args, **kwargs):
         # Call your objective_function with the design variables
@@ -384,12 +444,11 @@ class LinkageOptimizationProblem(ElementwiseProblem):
             print(len(target_curve_ax_y))
             
             raise ValueError("X should contain at most 4 values for the design variables.")
-            
-        f = objective_function(X1)
-        
+
         # Assign the objective function value to the "F" key of the out dictionary
-        out["F"] = [f]
-        
+        out["F"] = objective_function(X1)
+        #grashof condition 
+        out["G"] = X1[grashof(X1)[0][0]] + X1[grashof(X1)[0][3]] - X1[grashof(X1)[0][2]] - X1[grashof(X1)[0][1]]
 
 problem = LinkageOptimizationProblem()
 print("moo")
