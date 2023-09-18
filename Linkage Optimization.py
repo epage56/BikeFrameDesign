@@ -118,54 +118,70 @@ b = 250   # mm
 c = 110   # mm
 d = 244.244  # mm
 
-# test_result = np.array([50.12684447, 134.15106216, 488.36842375, 569.95798077])
-# test_result = np.array([50.15336187, 118.72426894,  53.28384091, 120.27259326])
-# test_result = np.array([50.32612371 ,101.16358628 , 52.01101179, 101.83780644])
-# test_result = np.array([54.93845191 ,86.08845309 ,64.96986728 ,89.59000895])
-# test_result = np.array([50.00183095,  72.20425701, 222.08995491, 199.88918179])
-test_result = np.array([100, 200 ,200, 200])
+#test_result = np.array([100, 200 ,200, 200])
+#a,b,c,d = test_result
 
-a,b,c,d = test_result
+inputangletheta2 = np.linspace(0, np.pi, 100)
 
-# Input angular velocity
-f = 16.7/60
-omega = 2 * np.pi * f
-t = np.linspace(0, 5, 100)
-y = a * np.sin(omega * t)
-x = a * np.cos(omega * t)
-theta2 = np.arctan2(y, x)
+def freudenstein(theta2, a, b, c, d):
+    # Solution of the vector loop equation proven in paper and by hand - wilk picture of whiteboard
+    
+    K1 = d/a
+    K2 = d/c
+    K3 = (a**2 - b**2 + c**2 + d**2)/(2*a*c)
 
-fi2 = np.arctan2(y, x)
+    A1 = np.cos(theta2) - K1 - K2*np.cos(theta2) + K3
+    B1 = -2*np.sin(theta2)
+    C1 = K1 - (K2+1)*np.cos(theta2) + K3
+    
+    theta4_1 = 2 * np.arctan2(-B1 + np.sqrt(B1**2 - 4*A1*C1), 2*A1) # this helps with quadrant specificity
+    theta4_2 = 2 * np.arctan2(-B1 - np.sqrt(B1**2 - 4*A1*C1), 2*A1)
 
-# Solution of the vector loop equation
-K1 = d/a
-K2 = d/c
-K3 = (a**2 - b**2 + c**2 + d**2)/(2*a*c)
-A = np.cos(fi2) - K1 - K2*np.cos(fi2) + K3
-B = -2*np.sin(fi2)
-C = K1 - (K2+1)*np.cos(fi2) + K3
-fi4_1 = 2 * np.arctan2(-B + np.sqrt(B**2 - 4*A*C), 2*A)
-fi4_2 = 2 * np.arctan2(-B - np.sqrt(B**2 - 4*A*C), 2*A)
+    # sol for theta3: (not used in the current calcs but good to have tbh)
+    K4 = d/b 
+    K5 = (c**2 - d**2 - a**2 - b**2)/(2*a*b)
+    
+    D1 = np.cos(theta2) - K1 + K4*np.cos(theta2) + K5
+    E1 = -2*np.sin(theta2)
+    F1 = K1 - (K4+1)*np.cos(theta2) + K5
+    
+    theta3_1 = 2 * np.arctan2(-E1 + np.sqrt(E1**2 - 4*D1*F1), 2*D1) # this helps with quadrant specificity
+    theta3_2 = 2 * np.arctan2(-E1 - np.sqrt(E1**2 - 4*D1*F1), 2*D1)
+    
+    #outputs respond to the choice of +(1) or -(2) in the eqn.
+    return theta4_1, theta4_2, theta3_1, theta3_2
 
-# Create a figure with subplots for old and new graphs
+#input is frequnecy of input crank, outputs time array, also theta2 array
+def movin(frequency):
+    f = frequency/60
+    omega = 2 * np.pi * f
+    t = np.linspace(0, np.pi, 100)
+    y = a * np.sin(omega * t)
+    x = a * np.cos(omega * t)
+    theta2 = np.arctan2(y, x)
+    return theta2, t
+
+
+inputangletheta2, t = movin(16.7)
+
+outputtheta4_1, outputtheta4_2 = freudenstein(inputangletheta2, a, b, c, d)[:2]
+
+
+#plotting the results:
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
 fig.subplots_adjust(left=0.1, right=0.9)
 
-# Initialize the old graph
-theta4_1 = np.arccos((a**2 + b**2 - c**2 - d**2) / (2 * a * b))
-theta4_2 = -theta4_1
-
-line_theta2, = ax1.plot(t, np.degrees(fi2) % 360, color='k', label=r'$θ_2$')
-line_theta4_1, = ax1.plot(t, np.degrees(fi4_1) % 360, color='b', label=r'$θ_{4_1}$')
-line_theta4_2, = ax1.plot(t, np.degrees(fi4_2) % 360, color='r', label=r'$θ_{4_2}$')
+line_theta2, = ax1.plot(t, np.degrees(inputangletheta2) % 360, color='k', label=r'$θ_2$')
+line_theta4_1, = ax1.plot(t, np.degrees(outputtheta4_1) % 360, color='b', label=r'$θ_{4_1}$')
+line_theta4_2, = ax1.plot(t, np.degrees(outputtheta4_2) % 360, color='r', label=r'$θ_{4_2}$')
 ax1.set_xlabel('t [s]')
 ax1.set_ylabel('degrees')
 ax1.legend()
 
-# Initialize the new animated graph
 link2, = ax2.plot([], [], 'k-', linewidth=2, label='Link 2')
 link3, = ax2.plot([], [], 'b-', linewidth=2, label='Link 3')
 link4, = ax2.plot([], [], 'r-', linewidth=2, label='Link 4')
+
 
 ax2.set_xlim(-400, 400)
 ax2.set_ylim(-400, 400)
@@ -175,42 +191,43 @@ ax2.set_title('New Animated Graph')
 ax2.legend()
 
 # Initialize empty arrays for position history
-x2_history = []
-y2_history = []
-x3_history = []
-y3_history = []
+xA_history = []
+yA_history = []
+xB_history = []
+yB_history = []
 
-# Animation function
-def animate(i):
-    theta2_i = theta2[i]
-    fi4_i = fi4_1[i]
+# Animation function, instantaneous point
+def animate(i): 
+    
+    theta2_i = inputangletheta2[i]
+    theta4_1_i = outputtheta4_1[i]
 
-    x2 = a * np.cos(theta2_i)
-    y2 = a * np.sin(theta2_i)
+    xA = a * np.cos(theta2_i)
+    yA = a * np.sin(theta2_i)
 
     # Calculate the positions of P3 based on theta2_i
-    x3 = d + c * np.cos(fi4_i)
-    y3 = 0 + c * np.sin(fi4_i)
+    xB = d + c * np.cos(theta4_1_i)
+    yB = 0 + c * np.sin(theta4_1_i)
 
     # Append current positions to history
-    x2_history.append(x2)
-    y2_history.append(y2)
-    x3_history.append(x3)
-    y3_history.append(y3)
+    xA_history.append(xA)
+    yA_history.append(yA)
+    xB_history.append(xB)
+    yB_history.append(yB)
 
     # Stationary position of the end of pivot 4
-    x4_stationary = d
-    y4_stationary = 0
+    xD_stationary = d
+    yD_stationary = 0
 
     # Plot the history along with current positions
-    link2.set_data([0, x2], [0, y2])
-    link3.set_data([x2, x3], [y2, y3])
-    link4.set_data([x3, x4_stationary], [y3, y4_stationary])
+    link2.set_data([0, xA], [0, yA])
+    link3.set_data([xA, xB], [yA, yB])
+    link4.set_data([xB, xD_stationary], [yB, yD_stationary])
 
     # Plot the path history
-    ax2.plot(x2_history, y2_history, 'k:', linewidth=0.5, alpha=0.5)
-    ax2.plot(x3_history, y3_history, 'b:', linewidth=0.5, alpha=0.5)
-
+    ax2.plot(xA_history, yA_history, 'k:', linewidth=0.5, alpha=0.5)
+    ax2.plot(xB_history, yB_history, 'b:', linewidth=0.5, alpha=0.5)
+    
 # Create an animation
 ani = FuncAnimation(fig, animate, frames=len(t), repeat=True, blit=False)
 
@@ -234,18 +251,64 @@ btn_pause_play.on_clicked(pause_play)
 
 plt.show()
 
+
 #%%
 
-plt.figure(figsize=(8, 4))  # Set the figure size
-plt.plot(x111, y111, label='Semicircle', color='blue')  # Plot the data
-plt.xlabel('x')  # Label for the x-axis
-plt.ylabel('y')  # Label for the y-axis
-plt.title('Semicircle Plot')  # Title of the plot
-plt.grid(True)  # Display grid lines
-plt.legend()  # Display legend
-plt.axhline(0, color='black',linewidth=0.5)  # Add a horizontal line at y=0
-plt.axvline(200, color='black',linewidth=0.5)  # Add a vertical line at x=200
-plt.show()  # Show the plot
+plt.clf()
+def plot_semi_circle(center, radius, concave_up=True):
+    # Generate an array of angles from 0 to pi if concave up or from pi to 0 if concave down
+    if concave_up:
+        theta = np.linspace(0, np.pi, 100)
+    else:
+        theta = np.linspace(np.pi, 0, 100)
+
+    # Calculate x and y coordinates of points on the semi-circle
+    x = center[0] + radius * np.cos(theta)
+    y = center[1] + radius * np.sin(theta)
+
+    # Plot the semi-circle
+    plt.figure(figsize=(6, 6))
+    plt.plot(x, y)
+    plt.axis('equal')  # Equal aspect ratio for a circular appearance
+    plt.xlabel('X-axis')
+    plt.ylabel('Y-axis')
+    plt.title('Semi-circle Plot')
+    plt.grid(True)
+    plt.show()
+    
+    return x, y 
+
+center = (0, 100)
+radius = 100
+concave_up = True
+x_targ, y_targ = plot_semi_circle(center, radius, concave_up)
+
+#%%
+
+import numpy as np
+
+def remove_nan_inf_rows(input_array):
+    # Identify rows with NaNs or infs
+    nan_rows = np.isnan(input_array).any(axis=1)
+    inf_rows = np.isinf(input_array).any(axis=1)
+
+    # Combine the conditions to find rows with NaNs or infs
+    bad_rows = nan_rows | inf_rows
+
+    # Remove rows with NaNs or infs
+    cleaned_array = input_array[~bad_rows]
+
+    return cleaned_array
+
+# Example usage:
+data = np.array([[1, 2],
+                 [3, 4],
+                 [5, np.nan],
+                 [6, 7],
+                 [8, np.inf]])
+
+cleaned_data = remove_nan_inf_rows(data)
+print(cleaned_data)
 
 
 #%%
@@ -254,42 +317,200 @@ from pymoo.optimize import minimize
 from pymoo.core.problem import ElementwiseProblem
 from pymoo.core.problem import Problem
 
+import numpy as np
+from scipy.spatial.distance import euclidean
+from fastdtw import fastdtw
+
 #### IDEA - FIT THE CURVE GIVEN TO A POLYNOMIAL REP THE output CURVE,
  ### WHICH WILL HAVE EVENLY DIST POINTS. bec u define the x range. TRY THIS NEXT TIME
 
-plt.clf()
+movin(16.7)
+center = (0, 100)
+radius = 100
+concave_up = True
+target_curve_ax_x, target_curve_ax_y = plot_semi_circle(center, radius, concave_up=False)
 
-testarr = [100, 250, 110, 244.244]
+theta4_1, theta4_2 = freudenstein(inputangletheta2, a, b, c, d)[:2]
 
-# Define the target curve (replace with your own data)
-
-x111 = np.linspace(-40, -20, 100)
-
-y111 = -np.sqrt((25**2 - (x111 - 100)**2))
-
-y111 = (1/2*x111+10)**2 - 100
-
-plt.figure(figsize=(8, 4))  # Set the figure size
-plt.plot(x111, y111, label='output curve to match', color='blue')  # Plot the data
-plt.xlabel('x')  # Label for the x-axis
-plt.ylabel('y')  # Label for the y-axis
-plt.title('Semicircle Plot')  # Title of the plot
-plt.grid(True)  # Display grid lines
-plt.legend()  # Display legend
-plt.axhline(0, color='black',linewidth=0.5)  # Add a horizontal line at y=0
-plt.axvline(125, color='black',linewidth=0.5)  # Add a vertical line at x=200
-plt.show()  # Show the plot
+output_path_xB = d + c * np.cos(theta4_1)
+output_path_xB = output_path_xB.flatten()
 
 
-target_curve_ax_x = X_ax_fit
-target_curve_ax_y = Y_ax_fit
 
-target_curve_ax_x = x111
-target_curve_ax_x = y111
+def objective_function(X1): 
+    # Extract design variables (e.g., link lengths)
+    a, b, c, d = X1
+    
+    theta4_1, theta4_2 = freudenstein(inputangletheta2, a, b, c, d)[:2]
+
+    output_path_xB = d + c * np.cos(theta4_1)
+    output_path_yB = c * np.sin(theta4_1)
+    
+    outputpath2d = np.column_stack((output_path_xB, output_path_yB))
+    idealoutputpath2d = np.column_stack((target_curve_ax_x, target_curve_ax_y))
+    
+    cleaned_ideal_ax_2d = remove_nan_inf_rows(idealoutputpath2d)
+    cleaned_exp_ax_2d = remove_nan_inf_rows(outputpath2d)
+    
+    # Calculate the MSE between the linkage path and target curve
+    mse = np.mean((output_path_xB - target_curve_ax_x) ** 2 + (output_path_yB - target_curve_ax_y) ** 2)
+    
+    try: 
+        dtw, path = fastdtw(cleaned_exp_ax_2d, cleaned_ideal_ax_2d , dist=euclidean)
+    
+    except:
+        # Handle the exception (e.g., a big error) by setting DTW to a large value
+        dtw = 100000
+    
+    #distance = dtw_x + dtw_y
+    return dtw
+
+
+import numpy as np
+from pymoo.optimize import minimize
+
+class LinkageOptimizationProblem(ElementwiseProblem):
+    def __init__(self):
+        # Define the bounds for your design variables (a, b, c, d)
+        xl = np.array([20, 20, 20, 20])
+        xu = np.array([500, 500, 500, 500])
+        super().__init__(n_var=4, n_obj=1, n_ieq_constr=0, xl=xl, xu=xu)
+
+    def _evaluate(self, X1, out, *args, **kwargs):
+        # Call your objective_function with the design variables
+        if len(X1) > 4:
+            print(len(X1))
+            print(len(target_curve_ax_x))
+            print(len(target_curve_ax_y))
+            
+            raise ValueError("X should contain at most 4 values for the design variables.")
+            
+        f = objective_function(X1)
+        
+        # Assign the objective function value to the "F" key of the out dictionary
+        out["F"] = [f]
+        
+
+problem = LinkageOptimizationProblem()
+print("moo")
+
+from pymoo.algorithms.soo.nonconvex.ga import GA
+from pymoo.algorithms.soo.nonconvex.pso import PSO
+
+from pymoo.termination.default import DefaultSingleObjectiveTermination
+from pymoo.termination import get_termination
+
+#termination = get_termination("n_gen", 500)
+
+# Create a GA algorithm instance
+algorithm = GA(
+    pop_size=500,
+    eliminate_duplicates=True,
+)
+
+
+initial_guess = np.array([100, 250, 110, 244.244])
+# Perform optimization
+res = minimize(problem, algorithm, seed=1, verbose = True, x0=initial_guess) 
+#add termination to customize the termination = termination gen amnt
+
+
+# Print the best solution found
+print("Best solution found:\nX = %s\nF = %s" % (res.X, res.F))
+
+a,b,c,d = res.X
+inputangletheta2, t = movin(16.7)
+outputtheta4_1, outputtheta4_2 = freudenstein(inputangletheta2, a, b, c, d)[:2]
+
+
+#plotting the results:
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+fig.subplots_adjust(left=0.1, right=0.9)
+
+line_theta2, = ax1.plot(t, np.degrees(inputangletheta2) % 360, color='k', label=r'$θ_2$')
+line_theta4_1, = ax1.plot(t, np.degrees(outputtheta4_1) % 360, color='b', label=r'$θ_{4_1}$')
+line_theta4_2, = ax1.plot(t, np.degrees(outputtheta4_2) % 360, color='r', label=r'$θ_{4_2}$')
+ax1.set_xlabel('t [s]')
+ax1.set_ylabel('degrees')
+ax1.legend()
+
+link2, = ax2.plot([], [], 'k-', linewidth=2, label='Link 2')
+link3, = ax2.plot([], [], 'b-', linewidth=2, label='Link 3')
+link4, = ax2.plot([], [], 'r-', linewidth=2, label='Link 4')
+
+
+ax2.set_xlim(-400, 400)
+ax2.set_ylim(-400, 400)
+ax2.set_xlabel('X')
+ax2.set_ylabel('Y')
+ax2.set_title('New Animated Graph')
+ax2.legend()
+
+# Initialize empty arrays for position history
+xA_history = []
+yA_history = []
+xB_history = []
+yB_history = []
+
+# Animation function, instantaneous point
+def animate(i): 
+    
+    theta2_i = inputangletheta2[i]
+    theta4_1_i = outputtheta4_1[i]
+
+    xA = a * np.cos(theta2_i)
+    yA = a * np.sin(theta2_i)
+
+    # Calculate the positions of P3 based on theta2_i
+    xB = d + c * np.cos(theta4_1_i)
+    yB = 0 + c * np.sin(theta4_1_i)
+
+    # Append current positions to history
+    xA_history.append(xA)
+    yA_history.append(yA)
+    xB_history.append(xB)
+    yB_history.append(yB)
+
+    # Stationary position of the end of pivot 4
+    xD_stationary = d
+    yD_stationary = 0
+
+    # Plot the history along with current positions
+    link2.set_data([0, xA], [0, yA])
+    link3.set_data([xA, xB], [yA, yB])
+    link4.set_data([xB, xD_stationary], [yB, yD_stationary])
+
+    # Plot the path history
+    ax2.plot(xA_history, yA_history, 'k:', linewidth=0.5, alpha=0.5)
+    ax2.plot(xB_history, yB_history, 'b:', linewidth=0.5, alpha=0.5)
+    
+# Create an animation
+ani = FuncAnimation(fig, animate, frames=len(t), repeat=True, blit=False)
+
+# Create a pause/play button
+ax_pause_play = plt.axes([0.8, 0.01, 0.1, 0.05])
+btn_pause_play = Button(ax_pause_play, 'Pause')
+
+paused = False
+
+def pause_play(event):
+    global paused
+    if paused:
+        ani.event_source.start()
+        btn_pause_play.label.set_text('Pause')
+    else:
+        ani.event_source.stop()
+        btn_pause_play.label.set_text('Play')
+    paused = not paused
+
+btn_pause_play.on_clicked(pause_play)
+
+plt.show()
 
 
 # Define the objective function to minimize (e.g., MSE between linkage path and target curve) 
 # passing x1 array (should be array of a,b,c,d) or linkage lengths
+#%%
 def objective_function(X1): 
     # Extract design variables (e.g., link lengths)
     a, b, c, d = X1
@@ -433,8 +654,8 @@ link2, = ax2.plot([], [], 'k-', linewidth=2, label='Link 2')
 link3, = ax2.plot([], [], 'b-', linewidth=2, label='Link 3')
 link4, = ax2.plot([], [], 'r-', linewidth=2, label='Link 4')
 
-ax2.set_xlim(-400, 400)
-ax2.set_ylim(-400, 400)
+ax2.set_xlim(-200, 200)
+ax2.set_ylim(-200, 200)
 ax2.set_xlabel('X')
 ax2.set_ylabel('Y')
 ax2.set_title('New Animated Graph')
