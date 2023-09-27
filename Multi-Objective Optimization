@@ -11,14 +11,6 @@ Created on Mon Sep 11 11:28:51 2023
 
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
-from matplotlib.widgets import Button
-
-# Link lengths
-a = 100   # mm
-b = 250   # mm
-c = 110   # mm
-d = 244.244  # mm
 
 def freudenstein(a, b, c, d, theta2start, theta2end):
     # Solution of the vector loop equation proven in paper and by hand - wilk picture of whiteboard
@@ -72,26 +64,18 @@ def calc_joint_pos(inputangle, outputangle, a, b, c, d):
 
 def plot_output_paths(inputangletheta2, outputtheta4_1, outputtheta4_2, xB, yB, xdes, ydes):
     #plotting the results:
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+    fig, (ax1) = plt.subplots(1,1, figsize=(8, 6))
     fig.subplots_adjust(left=0.1, right=0.9)
-
-    #line_theta2, = ax1.plot(t, np.degrees(inputangletheta2) % 360, color='k', label=r'$θ_2$')
-    #line_theta4_1, = ax1.plot(t, np.degrees(outputtheta4_1) % 360, color='b', label=r'$θ_{4_1}$')
-    #line_theta4_2, = ax1.plot(t, np.degrees(outputtheta4_2) % 360, color='r', label=r'$θ_{4_2}$')
-    ax1.set_xlabel('t [s]')
-    ax1.set_ylabel('degrees')
+    
+    ax1.plot(xdes, ydes, color='b', label='Desired Output Path')
+    ax1.plot(xB, yB, color='k', label='Optimized Output Path')
+    
+    ax1.set_xlim(100, 500)
+    ax1.set_ylim(300, 500)
+    ax1.set_xlabel('Distance (mm)')
+    ax1.set_ylabel('Distance (mm)')
+    ax1.set_title('Output paths')
     ax1.legend()
-
-    
-    ax2.plot(xdes, ydes, color='b', label='Desired Output Path')
-    ax2.plot(xB, yB, color='k', label='Optimized Output Path')
-    
-    ax2.set_xlim(100, 500)
-    ax2.set_ylim(300, 500)
-    ax2.set_xlabel('Distance (mm)')
-    ax2.set_ylabel('Distance (mm)')
-    ax2.set_title('Output paths')
-    ax2.legend()
 
 def create_concave_down_curve(vertex_x=300, width=200, plotter = True):
     a = -15 / ((width / 2) ** 2)
@@ -266,31 +250,21 @@ class LinkageOptimizationProblem(ElementwiseProblem):
         g3 = + travel_constraint_function(X1)[2] - 202
         g4 = - travel_constraint_function(X1)[2] + 198
         g5 = + travel_constraint_function(X1)[3]
-        g6 = - travel_constraint_function(X1)[4] + 390
-        g7 = + travel_constraint_function(X1)[4] - 410
+        g6 = - travel_constraint_function(X1)[4] + 399
+        g7 = + travel_constraint_function(X1)[4] - 401
         
         out["F"] = [f1, f2, f3]
         out["G"] = np.column_stack([g1, g2, g3, g4, g5, g6, g7])
         
 problem = LinkageOptimizationProblem()
 
-# termination = get_termination("n_gen", 1000)
-# algorithm = PSO()
-initial_guess = np.array([200, 400, -500, 310, 75, 150])
-# res = minimize(problem,
-#                algorithm,
-#                seed=1,
-#                x0 = initial_guess,
-#                verbose=True)
-
-# Perform optimization
-
 from pymoo.algorithms.moo.sms import SMSEMOA
 
+initial_guess = np.array([200, 400, -500, 310, 75, 150])
 algorithm = SMSEMOA()
 res = minimize(problem,
                algorithm,
-               ('n_gen', 250),
+               ('n_gen', 500),
                seed=1,
                verbose=True)
 
@@ -298,22 +272,19 @@ res = minimize(problem,
 # Print the best solution found
 print("Best solution found:\nX = %s\nF = %s" % (res.X, res.F))
 
-xdes, ydes = create_concave_down_curve()
-
-a, b, c, d, theta2start, theta2end =res.X
-
-outputtheta4_1, outputtheta4_2, inputtheta2 = freudenstein(a, b, c, d, theta2start, theta2end)[:3]
-
-xA, yA, xB, yB = calc_joint_pos(inputtheta2, outputtheta4_1, a,b,c,d)[:4]
-
-plot_output_paths(inputtheta2, outputtheta4_1, outputtheta4_2, xB, yB, xdes, ydes)
+# xdes, ydes = create_concave_down_curve()
+# a, b, c, d, theta2start, theta2end =res.X
+# outputtheta4_1, outputtheta4_2, inputtheta2 = freudenstein(a, b, c, d, theta2start, theta2end)[:3]
+# xA, yA, xB, yB = calc_joint_pos(inputtheta2, outputtheta4_1, a,b,c,d)[:4]
+# plot_output_paths(inputtheta2, outputtheta4_1, outputtheta4_2, xB, yB, xdes, ydes)
 
 
-#%%
+#%% plots optimized path vs desired path
 
 
-test = [ 423.83983226 , 195.19088966 ,-393.93364538  ,308.79289748 ,  62.48943683
-    ,90.01060486]
+test = [ 443.03227881 , 249.36197987, -402.2258077 ,  290.40725884 ,  69.81842202
+    ,95.6788756 ]
+
 
 a, b, c, d, theta2start, theta2end = test
 # 
@@ -325,23 +296,41 @@ xA, yA, xB, yB = calc_joint_pos(inputtheta2, outputtheta4_1, a,b,c,d)[:4]
 
 plot_output_paths(inputtheta2, outputtheta4_1, outputtheta4_2, xB, yB, xdes, ydes)
 
-# fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-# fig.subplots_adjust(left=0.1, right=0.9)
 
-# #line_theta2, = ax1.plot(t, np.degrees(inputangletheta2) % 360, color='k', label=r'$θ_2$')
-# #line_theta4_1, = ax1.plot(t, np.degrees(outputtheta4_1) % 360, color='b', label=r'$θ_{4_1}$')
-# line_theta4_2, = ax1.plot(np.degrees(inputtheta2), np.degrees(outputtheta4_2) % 360, color='r', label=r'$θ_{4_2}$')
-# ax1.set_xlabel('t [s]')
-# ax1.set_ylabel('degrees')
-# ax1.legend()
 
-# ax2.plot(xB, yB, color='k', label='Optimized Output Path')
-# ax2.plot(xB, yB, color='k', label='Desired Output Path')
+#%%Pareto front plot
+from pymoo.algorithms.moo.sms import SMSEMOA
+from pymoo.optimize import minimize
+from pymoo.problems import get_problem
+from pymoo.visualization.scatter import Scatter
 
-# ax2.set_xlabel('Distance (mm) x')
-# ax2.set_ylabel('Distance (mm) y')
-# ax2.set_title('Output paths')
-# ax2.legend()
+plot = Scatter()
+plot.add(problem.pareto_front(), plot_type="line", color="black", alpha=0.7)
+plot.add(res.F, color="red")
+plot.show()
+#%%PCP visualization of scores, 1, 30
 
-travel_constraint_function(test)
 
+from pymoo.visualization.pcp import PCP
+
+
+plot = PCP(title=("Run", {'pad': 30}),
+           n_ticks=10,
+           legend=(True, {'loc': "upper left"}),
+           labels=["a", "b", "c", "d", r"Start $\theta_2$", r"End $\theta_2$"]
+           )
+
+plot.set_axis_style(color="grey", alpha=0.5)
+plot.add(res.X, color="grey", alpha=0.3)
+plot.add(res.X[1], linewidth=5, color="red")
+plot.add(res.X[30], linewidth=5, color="blue")
+plot.show()
+
+#%%PCP visualization of lengths, 1,30
+
+plot = PCP()
+plot.set_axis_style(color="grey", alpha=0.5)
+plot.add(res.F, color="grey", alpha=0.3)
+plot.add(res.F[1], linewidth=5, color="red")
+plot.add(res.F[30], linewidth=5, color="blue")
+plot.show()
