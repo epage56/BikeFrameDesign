@@ -103,7 +103,7 @@ def create_concave_down_curve(vertex_x=300, width=200, plotter = True):
     
     return x, y
 
-def create_ideal_leverage_ratio(start_point=(0, 3.5), end_point=(200, 2.4), num_points=99, curviness = -0.01, plotter=True):
+def create_ideal_leverage_ratio(start_point=(0, 3.5), end_point=(200, 2.4), num_points=100, curviness = -0.01, plotter=True):
     x = np.linspace(start_point[0], end_point[0], num_points)
     b = start_point[1]
     a = curviness
@@ -377,6 +377,9 @@ print("Best solution found:\nX = %s\nF = %s" % (res.X, res.F))
 test = [ 443.03227881 , 249.36197987, -402.2258077 ,  290.40725884 ,  69.81842202
     ,95.6788756 ]
 
+test = [ 378.04520179,  246.14044847, -405.60990119 ,290.17168419 ,  65.24948587,
+    97.1609317 ]
+
 
 a, b, c, d, theta2start, theta2end = test
 # 
@@ -386,12 +389,82 @@ outputtheta4_1, outputtheta4_2, inputtheta2 = freudenstein(a, b, c, d, theta2sta
 
 xA, yA, xB, yB = calc_joint_pos(inputtheta2, outputtheta4_1, a,b,c,d)[:4]
 
-plot_output_paths(inputtheta2, outputtheta4_1, outputtheta4_2, xB, yB, xdes, ydes)
+def alt_leverage_ratio(X1):
+    
+    """
+    define leverage ratio real and compare to leverage ratio curve ideal
+    """
+    a, b, c, d , theta2start, theta2end = X1
+    
+    theta4_1, theta4_2, theta2= freudenstein(a, b, c, d, theta2start, theta2end)[:3]
+    #Get output path for set of parameters 
+    output_path_xB, output_path_yB = calc_joint_pos(theta4_1, theta4_2, a, b, c, d) [2:4]
+    
+    #clever reversal of direction to get shock link pos, also
+    #remember that the shock pivot is at a certain angle from the pivot
+    
+    uppershockx = np.cos(theta2 - np.pi - np.deg2rad(30))
+    uppershocky = np.sin(theta2 - np.pi - np.deg2rad(30)) 
+    
+    lowershockx = 320 
+    lowershocky = -30
+    
+    inst_shock_length = np.sqrt((uppershockx - lowershockx)**2 + (uppershocky-lowershocky)**2)
+    
+    delta_shocktravl = calculate_differences(inst_shock_length)
+    delta_axeltravl = calculate_differences(output_path_yB)
+    
+    #print(type(delta_axeltravl))
+    
+    delta_axeltravl = np.array(delta_axeltravl)
+    delta_shocktravl = np.array(delta_shocktravl)
+    
+    #print(type(delta_axeltravl))
+
+    delta_axeltravl = np.append(delta_axeltravl, delta_axeltravl[-1])
+    delta_shocktravl = np.append(delta_shocktravl, delta_shocktravl[-1])
+    
+    #print(type(delta_axeltravl))
+    #print(delta_axeltravl)
+
+    #print(len(delta_axeltravl))
+    
+    leverage_ratio = delta_shocktravl / delta_axeltravl
+    
+    levratex, levratey = create_ideal_leverage_ratio(plotter = False)
+        
+    ideal_leverage_ratio_2d = np.column_stack((levratex, levratey))
+    act_leverage_ratio_2d = np.column_stack((output_path_xB, leverage_ratio))
+    
+    pcm = similaritymeasures.pcm(act_leverage_ratio_2d, ideal_leverage_ratio_2d) 
+    #area = similaritymeasures.area_between_two_curves(act_leverage_ratio_2d, ideal_leverage_ratio_2d)
+    frechet = similaritymeasures.frechet_dist(act_leverage_ratio_2d, ideal_leverage_ratio_2d)
+
+    similarity_meas_lev = pcm + frechet
+    
+    ideal_leverage_ratio = levratey
+    real_leverage_ratio = leverage_ratio
+
+    
+    return similarity_meas_lev, ideal_leverage_ratio, real_leverage_ratio
 
 
+junk, idealylev, optylev = alt_leverage_ratio(test)
 
+xB1 = xB[::-1] 
+xB1= xB1 - xB1[1]
 
+print(xB1)
 
+plot_output_paths(inputtheta2, outputtheta4_1, outputtheta4_2, xB, yB, xdes, ydes, idealylev, optylev)
+
+#%%
+plt.plot(xB1, optylev)
+plt.xlabel('xB1')
+plt.ylabel('optylev')
+plt.title('Plot of xB1 vs. optylev')
+plt.grid(True)
+plt.show()
 
 
 #WE NEED TO PUT IN LEVERAGE RATIO UP TOP NEAR FREUDEINSTEIN / REFACTOR A LITTLE SO WE CAN CALL IT HERE SO IT CAN GRAPH
