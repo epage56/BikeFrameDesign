@@ -6,8 +6,6 @@ Created on Mon Sep 11 11:28:51 2023
 @author: elipage
 """
 
-#%%
-
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -141,7 +139,6 @@ def calculate_differences(arr):
 
 
 #%%
-import numpy as np
 from scipy.spatial.distance import euclidean
 from fastdtw import fastdtw
 from pymoo.optimize import minimize
@@ -152,13 +149,7 @@ from pymoo.termination.default import DefaultSingleObjectiveTermination
 from pymoo.termination import get_termination
 from pymoo.algorithms.moo.nsga2 import NSGA2
 
-
 import similaritymeasures
-
-#offset from rocker 2 pivot shock upper
-
-
-
 
 """
 constrain the min and max init starting points for the curve
@@ -168,7 +159,6 @@ implement more constraints, and even when doing the leverage ratio
 this will help with the 6bar
 
 """
-
 
 def objective_function(X1): 
     # Unpack parameters
